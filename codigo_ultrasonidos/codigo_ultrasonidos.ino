@@ -1,30 +1,50 @@
-const int trigger_pin = 9;
-const int echo_pin = 10;
-const int green_led = 8;
+// PINS
+const int TRIGGERPIN = 9;
+const int ECHOPIN = 10;
+const int GREENLED = 8;
+
+const int DETECTCLIENT = 100; // min distance to detect new client
+const int LECTORCARD = 3.00; // min card lector distance
+
+int restart = 0;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
 
-  pinMode(trigger_pin, OUTPUT);
-  pinMode(echo_pin, INPUT);
-  pinMode(green_led, OUTPUT);
+  // Init pins
+  pinMode(TRIGGERPIN, OUTPUT);
+  pinMode(ECHOPIN, INPUT);
+  pinMode(GREENLED, OUTPUT);
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  float distance = getDistance();
+  if (restart == 0) {
+    // Start Vending Machine
+    // digitalWrite(GREENLED, LOW);
+    analogWrite(GREENLED, 0);
+    delay(10000); // wait 10 sec
 
-  if (distance <= 3.00) {
-    // digitalWrite(green_led, HIGH);
-    analogWrite(green_led, 50);
-    delay(3000);
+    if (getDistance() < DETECTCLIENT) {
+      restart = 1;
+      // Code for selecting product
+    } else {
+      waitForClient();
+    }
   }
-  // digitalWrite(green_led, LOW);
-  analogWrite(green_led, 0);
 
-  delay(500);
+  if (restart == 1) {
+    if (getDistance() <= LECTORCARD) {
+      // digitalWrite(GREENLED, HIGH);
+      analogWrite(GREENLED, 50);
+      delay(3000);
+      restart = 0; // reset to start program again
+    } else {
+      waitForPayment();
+    }
+  }
 
 }
 
@@ -33,16 +53,16 @@ float getDistance() {
   float distance;
 
   // Set trigger to low and wait 2 microsec
-  digitalWrite(trigger_pin, LOW);
+  digitalWrite(TRIGGERPIN, LOW);
   delayMicroseconds(2);
 
   // Send a 10 microsec pulse to trigger
-  digitalWrite(trigger_pin, HIGH);
+  digitalWrite(TRIGGERPIN, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigger_pin, LOW);
+  digitalWrite(TRIGGERPIN, LOW);
 
   // Read time until echo receives something
-  time = pulseIn(echo_pin, HIGH);
+  time = pulseIn(ECHOPIN, HIGH);
 
   // Calculate distance in cm
   // Sound speed = 34300 cm/s
@@ -54,4 +74,12 @@ float getDistance() {
   Serial.println(" cm");
 
   return distance;
+}
+
+void waitForClient() {
+  // LCD code
+}
+
+void waitForPayment() {
+  // LCD code
 }
