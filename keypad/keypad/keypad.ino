@@ -25,6 +25,9 @@ const int numCodes = sizeof(codes) / sizeof(codes[0]); // Número de códigos
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
+bool isConfirmed = false; 
+bool isValid = false;
+
 void setup() {
   Serial.println("Iniciando...");
   Serial.begin(9600);
@@ -35,42 +38,49 @@ void loop() {
   char key = keypad.getKey();
 
   if (key) {
-    
-    Serial.println(key);
+    Serial.print(key);
 
-    if (data_count < NUM_DIGITS) {
-      enteredCode[data_count] = key;
-    }
+    if (!isConfirmed) { 
+      if (data_count < NUM_DIGITS) {
+        enteredCode[data_count] = key;
+        data_count++;
+      }
 
-    if (data_count == NUM_DIGITS) {
+      if (data_count == NUM_DIGITS) {
+        enteredCode[data_count] = '\0'; // Agregar terminador nulo
+        Serial.print("\nCódigo introducido: ");
+        Serial.println(enteredCode);
 
-      Serial.print("Código introducido ");
-      Serial.print(enteredCode);
+        // Chequeamos si el código es válido
+        isValid = false;
+        for (int i = 0; i < numCodes; i++) {
+          if (strcmp(enteredCode, codes[i]) == 0) {
+            isValid = true;
+            break;
+          }
+        }
 
-      // chequeamos que el codigo introducido es valido
-      bool isValid = false;
-      
-      for (int i = 0; i < numCodes; i++) {
-        if (strcmp(enteredCode, codes[i]) == 0) {
-          isValid = true;
-          break;
+        if (isValid) {
+          Serial.println("Pulse # para confirmar la selección.");
+          isConfirmed = true; 
+        } else {
+          Serial.println("Introduzca un código válido.");
+          memset(enteredCode, '\0', sizeof(enteredCode)); // Limpiar buffer
+          data_count = 0; 
         }
       }
 
-      if (isValid) {
-        Serial.println("\nPulse # para confirmar seleccion");
+    } else { 
+      if (key == '#') {
+        Serial.println("\nCompra confirmada. Acerque tarjeta");
+
+        //Pagar aquí, tener en cuenta el ultrasonido
+        isConfirmed = false; 
+        memset(enteredCode, '\0', sizeof(enteredCode)); 
+        data_count = 0; 
       } else {
-        Serial.println("Introduzca código");
-        memset(enteredCode, '\0', sizeof(enteredCode));
-        data_count = 0;
-        isValid = false;
+        Serial.println("Pulse # para confirmar la compra.");
       }
-
-
     }
-
-    data_count++; 
   }
-
 }
-
