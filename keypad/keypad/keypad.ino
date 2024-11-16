@@ -36,11 +36,13 @@ void loop() {
 
   if (key) {
     
+    Serial.println(key);
+
     if (data_count < NUM_DIGITS) {
       enteredCode[data_count] = key;
     }
 
-    if (data_count == NUM_DIGITS - 1) {
+    if (data_count == NUM_DIGITS) {
 
       Serial.print("Código introducido ");
       Serial.print(enteredCode);
@@ -56,11 +58,12 @@ void loop() {
       }
 
       if (isValid) {
-        Serial.print("Pulse # para selecionar");
+        Serial.println("\nPulse # para confirmar seleccion");
       } else {
-        Serial.print("Introduzca código");
+        Serial.println("Introduzca código");
         memset(enteredCode, '\0', sizeof(enteredCode));
         data_count = 0;
+        isValid = false;
       }
 
 
