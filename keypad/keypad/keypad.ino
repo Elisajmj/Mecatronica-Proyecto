@@ -55,6 +55,29 @@ void displayText (const char* string1, const char* string2) {
   lcd.print(string2);
 }
 
+
+void valid(bool isValid) {
+  // si es valido, confirmamos compra, sino es valido
+  // volvemos a pedir codigo
+  if (isValid) {
+    float price = select(enteredCode);
+    displayText("Precio: ", " ");
+    lcd.print(price);
+    
+    delay(1000);
+    displayText("Pulse # para", "confirmar: ");
+    
+    isConfirmed = true; 
+  } else {
+    lcd.clear();
+    lcd.noAutoscroll();
+    displayText("Introduce codigo", " valido: ");
+
+    memset(enteredCode, '\0', sizeof(enteredCode)); // Limpiar buffer
+    data_count = 0; 
+  }
+}
+
 void processCode(char key) {
 
   // Mientras se introduzcan menos de 3 digitos, cogemos
@@ -66,7 +89,7 @@ void processCode(char key) {
         data_count++;
       }
   
-  // Si tiene 3 digitos, comprobamos si es valido
+  // Si tiene 3 digitos, comprobamos codigo
   if (data_count == NUM_DIGITS) {
     enteredCode[data_count] = '\0'; // Agregar terminador nulo
     Serial.print("\nCódigo introducido: ");
@@ -79,24 +102,8 @@ void processCode(char key) {
         break;
       }
     }
-
-    if (isValid) {
-      float price = select(enteredCode);
-      displayText("Precio: ", " ");
-      lcd.print(price);
-      
-      delay(1000);
-      displayText("Pulse # para", "confirmar: ");
-      
-      isConfirmed = true; 
-    } else {
-      lcd.clear();
-      lcd.noAutoscroll();
-      displayText("Introduce codigo", " valido: ");
-
-      memset(enteredCode, '\0', sizeof(enteredCode)); // Limpiar buffer
-      data_count = 0; 
-    }
+    
+    valid(isValid);
   }
  } 
 
