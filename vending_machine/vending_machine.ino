@@ -49,7 +49,7 @@ float prices[] = {1.2, 2.0, 1.5, 1.0};    // Prices of the food
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 // LCD variables
-const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 5, D5_PIN = 4, D6_PIN = 3, D7_PIN = 2;  // LCD Pins
+const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 51, D5_PIN = 49, D6_PIN = 47, D7_PIN = 45;  // LCD Pins
 LiquidCrystal lcd(RS_PIN, EN_PIN, D4_PIN, D5_PIN, D6_PIN, D7_PIN);
 
 // Ultrasound data
@@ -136,7 +136,20 @@ void rotate_servo(int servo){
   servos[servo].writeMicroseconds(1500);
 }
 
+void displayText (const char* string1, const char* string2) {
+  lcd.clear();
+
+  lcd.setCursor(0, 0);
+  lcd.print(string1);
+
+  lcd.setCursor(0, 1);
+  lcd.print(string2);
+}
+
 void setup() {
+
+  displayText("Init vending", "machine");
+
   Serial.println("Starting vending machine...");
   // Servos initialization
   for (int i = 0; i < numServos; i++) {
@@ -148,8 +161,10 @@ void setup() {
   pinMode(echo_pin, INPUT);
 
   strcpy(selectedProduct, "");    // initialize the product string
+  
 
   Serial.begin(9600);
+  
   Serial.println("Vending machine set up");
 }
 
@@ -161,6 +176,7 @@ void loop() {
       if(near_client()){
         current_state = TAKING_ORDER;
         Serial.println("Client near passing to TAKING_ORDER");
+        displayText("Waiting for", "padawan");
       }
       break;
 
@@ -169,6 +185,7 @@ void loop() {
       if((new_key = keypad.getKey()) != NO_KEY){
         selectedProduct[len_order] = new_key;
         Serial.print("Nueva key: ");
+        displayText("Introduce code", selectedProduct);
         Serial.println(selectedProduct);
         len_order++;
       }
@@ -180,12 +197,16 @@ void loop() {
         // if is valid we get to next state
         if(code_valid(selectedProduct)){
           Serial.print("Got order ");
+          displayText("Got order", selectedProduct);
           Serial.print(selectedProduct);
           Serial.println(" passing to PROCESSING_SALE");
+          displayText("Product", "selected");
+
           current_state = CHARGING;
         } else {
           Serial.print(selectedProduct);
           Serial.println(" wrong order");
+          displayText("Wrong code", " ");
           memset(selectedProduct, 0, sizeof(selectedProduct));
         }
       } 
@@ -197,6 +218,8 @@ void loop() {
         len_order = 0;
         memset(selectedProduct, 0, sizeof(selectedProduct));
         Serial.println("Client walks away! pass to WAITING_CLIENT");
+        displayText("Waiting for", "client");
+
       }
       // else restart order
       break;
@@ -213,6 +236,8 @@ void loop() {
         len_order = 0;
         memset(selectedProduct, 0, sizeof(selectedProduct));
         Serial.println("Client walks away! pass to WAITING_CLIENT");
+        displayText("Waiting for", "client");
+
       }
       break;
 
@@ -238,6 +263,8 @@ void loop() {
       len_order = 0;
       memset(selectedProduct, 0, sizeof(selectedProduct));
       Serial.println("Client walks away! pass to WAITING_CLIENT");
+      displayText("Waiting for", "client");
+
       current_state = WAITING_CLIENT;
       break;
   }
