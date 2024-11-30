@@ -17,7 +17,7 @@ const int ORDER_LEN = 3;    // Order format "A11"
 const byte ROWS = 4;        // Rows of keypad 
 const byte COLS = 4;        // Columns of keypad
 const int AWAY_CLIENT_TIME = 4000;      // Time to consider that the client is away in ms
-const int TIME_TO_GET_PRODUCT = 2000;   // Time to let the client get the product in ms
+const int TIME_TO_GET_PRODUCT = 5000;   // Time to let the client get the product in ms
 const int TIME_SERVO_ROT = 2000;        // Time of rotation of the servos in ms
 const int NEAR_CLIENT_DIST = 70;        // Distance threshold to set near client in cm
 const int NEAR_CARD_DIST = 3;           // Distance threshold to charge a card in cm
@@ -49,7 +49,7 @@ float prices[] = {1.2, 2.0, 1.5, 1.0};    // Prices of the food
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 // LCD variables
-const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 51, D5_PIN = 49, D6_PIN = 47, D7_PIN = 45;  // LCD Pins
+const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 50, D5_PIN = 48, D6_PIN = 46, D7_PIN = 44;  // LCD Pins
 LiquidCrystal lcd(RS_PIN, EN_PIN, D4_PIN, D5_PIN, D6_PIN, D7_PIN);
 
 // Ultrasound data
@@ -136,7 +136,7 @@ void rotate_servo(int servo){
   servos[servo].writeMicroseconds(1500);
 }
 
-void displayText (const char* string1, const char* string2) {
+void displayText(char* string1, char* string2) {
   lcd.clear();
 
   lcd.setCursor(0, 0);
@@ -144,11 +144,12 @@ void displayText (const char* string1, const char* string2) {
 
   lcd.setCursor(0, 1);
   lcd.print(string2);
+
+  delay(1000);
 }
 
 void setup() {
-
-  displayText("Init vending", "machine");
+  Serial.begin(9600);
 
   Serial.println("Starting vending machine...");
   // Servos initialization
@@ -162,9 +163,9 @@ void setup() {
 
   strcpy(selectedProduct, "");    // initialize the product string
   
+  lcd.begin(16, 2);
+  displayText("  Init vending", "    machine");
 
-  Serial.begin(9600);
-  
   Serial.println("Vending machine set up");
 }
 
@@ -172,11 +173,14 @@ void setup() {
 void loop() {
   switch(current_state){
     case WAITING_CLIENT:    // Waiting for a new customer
+      displayText("   Waiting for", "     Padawan");
+      Serial.println("Waiting for client");
       // If the ultrasound sets that a client is near, we pass state
       if(near_client()){
         current_state = TAKING_ORDER;
         Serial.println("Client near passing to TAKING_ORDER");
-        displayText("Waiting for", "padawan");
+        // displayText("Introduce code", " ");
+
       }
       break;
 
@@ -184,44 +188,31 @@ void loop() {
       // Read the pad until full order is writen
       if((new_key = keypad.getKey()) != NO_KEY){
         selectedProduct[len_order] = new_key;
+        // displayText("Introduced code:", selectedProduct);
         Serial.print("Nueva key: ");
-        displayText("Introduce code", selectedProduct);
         Serial.println(selectedProduct);
         len_order++;
       }
 
       // we get a full order
       if(len_order == ORDER_LEN){
-        len_order = 0;
-
         // if is valid we get to next state
         if(code_valid(selectedProduct)){
           Serial.print("Got order ");
-          displayText("Got order", selectedProduct);
+          // displayText("Got order", selectedProduct);
           Serial.print(selectedProduct);
           Serial.println(" passing to PROCESSING_SALE");
-          displayText("Product", "selected");
+          // displayText("    Product", "    selected");
 
           current_state = CHARGING;
         } else {
           Serial.print(selectedProduct);
           Serial.println(" wrong order");
-          displayText("Wrong code", " ");
+          // displayText("   Wrong code", " ");
           memset(selectedProduct, 0, sizeof(selectedProduct));
+          len_order = 0;
         }
       } 
-      // If given order is valid get to next state
-
-      // else if the client walks away we restar the order and go back to waiting client
-      if(!near_client()){
-        current_state = WAITING_CLIENT;
-        len_order = 0;
-        memset(selectedProduct, 0, sizeof(selectedProduct));
-        Serial.println("Client walks away! pass to WAITING_CLIENT");
-        displayText("Waiting for", "client");
-
-      }
-      // else restart order
       break;
 
     case CHARGING:
@@ -230,15 +221,6 @@ void loop() {
         current_state = PROCESSING_SALE;
       }
 
-      // else if the client walks away we restar the order and go back to waiting client
-      if(!near_client()){
-        current_state = WAITING_CLIENT;
-        len_order = 0;
-        memset(selectedProduct, 0, sizeof(selectedProduct));
-        Serial.println("Client walks away! pass to WAITING_CLIENT");
-        displayText("Waiting for", "client");
-
-      }
       break;
 
     case PROCESSING_SALE:   // Processing the given order
@@ -259,14 +241,18 @@ void loop() {
     case IDLE_STATE:
       // wait until client gets the product
       delay(TIME_TO_GET_PRODUCT);
-      // we restart the machine and get ready to new client
-      len_order = 0;
-      memset(selectedProduct, 0, sizeof(selectedProduct));
-      Serial.println("Client walks away! pass to WAITING_CLIENT");
-      displayText("Waiting for", "client");
+      // displayText("May the 4th be", "  with you");
 
       current_state = WAITING_CLIENT;
       break;
+  }
+
+  // else if the client walks away we restar the order and go back to waiting client
+  if(!near_client()){
+    current_state = WAITING_CLIENT;
+    len_order = 0;
+    memset(selectedProduct, 0, sizeof(selectedProduct));
+    Serial.println("Client walks away! pass to WAITING_CLIENT");
   }
 
   delay(100);   // avoid loop saturation
