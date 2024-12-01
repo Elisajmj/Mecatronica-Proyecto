@@ -19,8 +19,8 @@ char keys[ROWS][COLS] = {
   {'*','0','#','D'}
 };
 
-byte rowPins[ROWS] = {53, 51, 49, 47}; // Pines de las filas del keypad
-byte colPins[COLS] = {45, 43, 41, 39};  // Pines de las columnas del keypad
+byte rowPins[ROWS] = {30, 32, 34, 46};    // Keypad rows pins
+byte colPins[COLS] = {31, 33, 35, 37};  
 
 const char* codes[] = {"A11", "A12", "B11", "B12"};  // Codigos de los alimentos de la maquina
 float prices[4] = {1.2, 2.0, 1.5, 1.0};  // Codigos de los alimentos de la maquina
@@ -29,7 +29,7 @@ const int numCodes = sizeof(codes) / sizeof(codes[0]); // Número de códigos
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 5, D5_PIN = 4, D6_PIN = 3, D7_PIN = 2;  //Pines utilizados del LCD
+const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 50, D5_PIN = 48, D6_PIN = 46, D7_PIN = 44;  // LCD Pins
 LiquidCrystal lcd(RS_PIN, EN_PIN, D4_PIN, D5_PIN, D6_PIN, D7_PIN);
 
 bool isConfirmed = false; 

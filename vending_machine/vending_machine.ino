@@ -43,7 +43,7 @@ char keys[ROWS][COLS] = {
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
-byte rowPins[ROWS] = {30, 32, 34, 46};    // Keypad rows pins
+byte rowPins[ROWS] = {30, 32, 34, 53};    // Keypad rows pins
 byte colPins[COLS] = {31, 33, 35, 37};    // Keypad columns pins
 float prices[] = {1.2, 2.0, 1.5, 1.0};    // Prices of the food
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
@@ -148,6 +148,18 @@ void displayText(char* string1, char* string2) {
   delay(1000);
 }
 
+float select(char selectedProduct[ORDER_LEN + 1]) {
+  int codes_len = sizeof(codes) / sizeof(codes[0]);
+
+  for (int i = 0; i < codes_len; i++) {
+      if (strcmp(selectedProduct, codes[i]) == 0) {
+        return prices[i];
+      }
+    }
+  
+  return 0;
+}
+
 void setup() {
   Serial.begin(9600);
 
@@ -171,6 +183,7 @@ void setup() {
 
 
 void loop() {
+
   switch(current_state){
     case WAITING_CLIENT:    // Waiting for a new customer
       displayText("   Waiting for", "     Padawan");
@@ -179,7 +192,7 @@ void loop() {
       if(near_client()){
         current_state = TAKING_ORDER;
         Serial.println("Client near passing to TAKING_ORDER");
-        // displayText("Introduce code", " ");
+        displayText("Introduce code", " ");
 
       }
       break;
@@ -188,7 +201,7 @@ void loop() {
       // Read the pad until full order is writen
       if((new_key = keypad.getKey()) != NO_KEY){
         selectedProduct[len_order] = new_key;
-        // displayText("Introduced code:", selectedProduct);
+        displayText("Introduced code:", selectedProduct);
         Serial.print("Nueva key: ");
         Serial.println(selectedProduct);
         len_order++;
@@ -199,18 +212,27 @@ void loop() {
         // if is valid we get to next state
         if(code_valid(selectedProduct)){
           Serial.print("Got order ");
-          // displayText("Got order", selectedProduct);
+          displayText("Got order", selectedProduct);
           Serial.print(selectedProduct);
           Serial.println(" passing to PROCESSING_SALE");
-          // displayText("    Product", "    selected");
+
+          float price = select(selectedProduct);
+          Serial.println(price);
+          displayText("   Precio: ", " ");
+          lcd.setCursor(4, 1);
+          lcd.print(price);
+          delay(1000);
+          
 
           current_state = CHARGING;
         } else {
           Serial.print(selectedProduct);
           Serial.println(" wrong order");
-          // displayText("   Wrong code", " ");
+          displayText("   Wrong code", " ");
           memset(selectedProduct, 0, sizeof(selectedProduct));
           len_order = 0;
+          displayText("  Try", "  again");          
+          
         }
       } 
       break;
@@ -224,6 +246,8 @@ void loop() {
       break;
 
     case PROCESSING_SALE:   // Processing the given order
+      displayText("Processing", "   order");
+
       // Now we set the servomotor of the selected product to turn until the product is down
       if(!strcmp(selectedProduct, "A11"))
           rotate_servo(0);    // rotate the servo up right
@@ -235,15 +259,18 @@ void loop() {
           rotate_servo(3);    // rotate the servo down left
           
       // product has been processed we jump to idle state to let the client get the product
+      displayText("  Get your", "   order");
+
       current_state = IDLE_STATE;
       break;
 
     case IDLE_STATE:
       // wait until client gets the product
       delay(TIME_TO_GET_PRODUCT);
-      // displayText("May the 4th be", "  with you");
+      displayText("May the 4th be", "  with you");
 
       current_state = WAITING_CLIENT;
+      len_order = 0;
       break;
   }
 
