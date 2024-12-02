@@ -18,7 +18,7 @@ const byte ROWS = 4;        // Rows of keypad
 const byte COLS = 4;        // Columns of keypad
 const int AWAY_CLIENT_TIME = 4000;      // Time to consider that the client is away in ms
 const int TIME_TO_GET_PRODUCT = 5000;   // Time to let the client get the product in ms
-const int TIME_SERVO_ROT = 2000;        // Time of rotation of the servos in ms
+const int TIME_SERVO_ROT = 4000;        // Time of rotation of the servos in ms
 const int NEAR_CLIENT_DIST = 70;        // Distance threshold to set near client in cm
 const int NEAR_CARD_DIST = 3;           // Distance threshold to charge a card in cm
 const char* codes[] = {"A11", "A12",    // Codes of the different foods
@@ -43,18 +43,18 @@ char keys[ROWS][COLS] = {
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
-byte rowPins[ROWS] = {30, 32, 34, 53};    // Keypad rows pins
-byte colPins[COLS] = {31, 33, 35, 37};    // Keypad columns pins
+byte rowPins[ROWS] = {31, 33, 35, 37};    // Keypad rows pins
+byte colPins[COLS] = {39, 41, 43, 45};    // Keypad columns pins
 float prices[] = {1.2, 2.0, 1.5, 1.0};    // Prices of the food
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 // LCD variables
-const int RS_PIN = 12, EN_PIN = 11, D4_PIN = 50, D5_PIN = 48, D6_PIN = 46, D7_PIN = 44;  // LCD Pins
-LiquidCrystal lcd(RS_PIN, EN_PIN, D4_PIN, D5_PIN, D6_PIN, D7_PIN);
+const int RS_PIN = 8, E_PIN = 9, D4_PIN = 32, D5_PIN = 34, D6_PIN = 36, D7_PIN = 38;  // LCD Pins
+LiquidCrystal lcd(RS_PIN, E_PIN, D4_PIN, D5_PIN, D6_PIN, D7_PIN);
 
 // Ultrasound data
-const int trigger_pin = 8;
-const int echo_pin = 9;
+const int trigger_pin = 12;
+const int echo_pin = 13;
 bool client_near = false;
 int client_lost = 0;
 
@@ -93,9 +93,9 @@ float get_distance() {
   // distance = (time * 0.0343) / 2;
   distance = time / 29 / 2.0;
 
-  // Serial.print("Distancia: ");
-  // Serial.print(distance);
-  // Serial.println(" cm");
+  Serial.print("Distancia: ");
+  Serial.print(distance);
+  Serial.println(" cm");
 
   return distance;
 }
@@ -120,6 +120,9 @@ bool near_client(){
         client_near = true;
       }
     }
+  } else {  // if we detect near client again we restart 
+    client_lost = 0;  // restart the counter
+    client_near = true;
   }
 
   return client_near;
@@ -192,8 +195,7 @@ void loop() {
       if(near_client()){
         current_state = TAKING_ORDER;
         Serial.println("Client near passing to TAKING_ORDER");
-        displayText("Introduce code", " ");
-
+        displayText("Introduce code: ", " ");
       }
       break;
 
@@ -212,19 +214,23 @@ void loop() {
         // if is valid we get to next state
         if(code_valid(selectedProduct)){
           Serial.print("Got order ");
-          displayText("Got order", selectedProduct);
+          displayText("   Got order", selectedProduct);
           Serial.print(selectedProduct);
-          Serial.println(" passing to PROCESSING_SALE");
+          Serial.println("Passing to PROCESSING_SALE");
 
+          // Show in LCD
           float price = select(selectedProduct);
           Serial.println(price);
           displayText("   Precio: ", " ");
           lcd.setCursor(4, 1);
           lcd.print(price);
+          lcd.print("$");
+
+
           delay(1000);
-          
 
           current_state = CHARGING;
+          Serial.println("Client near passing to CHARGING");
         } else {
           Serial.print(selectedProduct);
           Serial.println(" wrong order");
@@ -232,21 +238,36 @@ void loop() {
           memset(selectedProduct, 0, sizeof(selectedProduct));
           len_order = 0;
           displayText("  Try", "  again");          
-          
         }
-      } 
+      }
+      // else if the client walks away we restar the order and go back to waiting client
+      if(!near_client()){
+        current_state = WAITING_CLIENT;
+        len_order = 0;
+        memset(selectedProduct, 0, sizeof(selectedProduct));
+        Serial.println("Client walks away! pass to WAITING_CLIENT");
+      }
       break;
 
     case CHARGING:
       // if the card is near the NFC (Ultrasound) then we "charge" and pass to next state
       if(get_distance() <= NEAR_CARD_DIST){
         current_state = PROCESSING_SALE;
+        Serial.println("Client passing to PROCESSING_SALE");
+      }
+
+      // else if the client walks away we restar the order and go back to waiting client
+      if(!near_client()){
+        current_state = WAITING_CLIENT;
+        len_order = 0;
+        memset(selectedProduct, 0, sizeof(selectedProduct));
+        Serial.println("Client walks away! pass to WAITING_CLIENT");
       }
 
       break;
 
     case PROCESSING_SALE:   // Processing the given order
-      displayText("Processing", "   order");
+      displayText("  Processing", "   order");
 
       // Now we set the servomotor of the selected product to turn until the product is down
       if(!strcmp(selectedProduct, "A11"))
@@ -270,16 +291,10 @@ void loop() {
       displayText("May the 4th be", "  with you");
 
       current_state = WAITING_CLIENT;
+      Serial.println("Client near passing to WAITING_CLIENT");
       len_order = 0;
+      memset(selectedProduct, 0, sizeof(selectedProduct));
       break;
-  }
-
-  // else if the client walks away we restar the order and go back to waiting client
-  if(!near_client()){
-    current_state = WAITING_CLIENT;
-    len_order = 0;
-    memset(selectedProduct, 0, sizeof(selectedProduct));
-    Serial.println("Client walks away! pass to WAITING_CLIENT");
   }
 
   delay(100);   // avoid loop saturation
